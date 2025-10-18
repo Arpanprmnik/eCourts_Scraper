@@ -1,4 +1,4 @@
-# app.py
+
 import io
 import os
 import zipfile
@@ -9,7 +9,7 @@ import requests
 from bs4 import BeautifulSoup
 from flask import Flask, render_template, request, send_file, flash, redirect, url_for
 
-# Optional Selenium fallback
+
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.chrome.options import Options as ChromeOptions
@@ -20,11 +20,9 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET", "secretkey")
 
-# --- Configuration ---
 BASE_PAGE_URL = "https://newdelhi.dcourts.gov.in/cause-list-%e2%81%84-daily-board/"
-REQUEST_TIMEOUT = 20  # seconds
+REQUEST_TIMEOUT = 20  
 
-# --- Helpers ---------------------------------------------------------------
 
 def absolute_url(base, link):
     return urljoin(base, link)
@@ -41,16 +39,13 @@ def looks_like_pdf_link(href, text, date_strs):
     lower = href.lower()
     text_lower = (text or "").lower()
 
-    # direct PDF
     if lower.endswith(".pdf"):
         return True
 
-    # keywords
     keywords = ["cause", "causelist", "cause-list", "daily-board", "board", "causel"]
     if any(k in lower for k in keywords) or any(k in text_lower for k in keywords):
         return True
 
-    # date matching
     for d in date_strs:
         if d in lower or d in text_lower:
             return True
@@ -72,16 +67,16 @@ def generate_date_variations(date_iso):
     yyyymmdd = f"{yyyy}{mm}{dd}"
     dmy_dash = f"{dd}-{mm}-{yyyy}"
     dmy_slash = f"{dd}/{mm}/{yyyy}"
-    # short month name
+    
     import calendar
-    mname = calendar.month_abbr[int(mm)].lower()  # e.g., 'Oct' -> 'Oct'
+    mname = calendar.month_abbr[int(mm)].lower()  
     dmy_mon = f"{dd}-{mname}-{yyyy}"
     return list({date_iso, ddmmyyyy, yyyymmdd, dmy_dash, dmy_slash, dmy_mon})
 
 def fetch_page_with_requests(url):
     resp = requests.get(url, timeout=REQUEST_TIMEOUT, headers={"User-Agent": "Mozilla/5.0"})
     resp.raise_for_status()
-    return resp.text, resp.url  # return possibly redirected URL as base
+    return resp.text, resp.url  
 
 def fetch_page_with_selenium(url):
     """
@@ -97,7 +92,7 @@ def fetch_page_with_selenium(url):
     try:
         driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=opts)
         driver.get(url)
-        # wait a brief moment for JS to populate (could be improved using expected_conditions)
+        
         import time
         time.sleep(2)
         return driver.page_source, driver.current_url
@@ -117,11 +112,10 @@ def collect_candidate_pdf_links(html, base_url, date_strs):
         text = a.get_text(" ", strip=True)
         if not href:
             continue
-        # make absolute
+
         full = absolute_url(base_url, href)
         if looks_like_pdf_link(href, text, date_strs) or looks_like_pdf_link(full, text, date_strs):
             candidates.append({"href": full, "text": text})
-    # dedupe preserving order
     seen = set()
     unique = []
     for c in candidates:
@@ -135,7 +129,7 @@ def download_binary(session, url):
     resp.raise_for_status()
     return resp.content, resp.headers.get("Content-Type", "")
 
-# --- Routes ---------------------------------------------------------------
+
 
 @app.route("/", methods=["GET"])
 def index():
@@ -148,23 +142,21 @@ def download_all():
         flash("Please provide a date in YYYY-MM-DD format.", "error")
         return redirect(url_for("index"))
 
-    # create date patterns
+    
     date_variants = generate_date_variations(date)
 
-    # 1) Try with requests
     try:
         html, final_base = fetch_page_with_requests(BASE_PAGE_URL)
     except Exception as e_req:
-        # fallback to Selenium on request failure
+        
         try:
             html, final_base = fetch_page_with_selenium(BASE_PAGE_URL)
         except Exception as e_se:
             return f"<h1>Error</h1><p>Failed to fetch the court page with requests and selenium.<br>Requests error: {e_req}<br>Selenium error: {e_se}</p>", 500
 
-    # 2) Find candidate links
     candidates = collect_candidate_pdf_links(html, final_base, date_variants)
 
-    # If nothing candidate found, fallback to selenium render and re-check
+    
     if not candidates:
         try:
             html_js, final_base_js = fetch_page_with_selenium(BASE_PAGE_URL)
@@ -173,7 +165,6 @@ def download_all():
             pass
 
     if not candidates:
-        # No candidates found — return informative message to tweak heuristics
         return (
             "<h1>No cause-list links found</h1>"
             "<p>Could not find PDF links matching heuristics on the page. "
@@ -184,7 +175,6 @@ def download_all():
             "</ul>"
         ), 404
 
-    # 3) Download candidates and compress into zip
     session = requests.Session()
     session.headers.update({"User-Agent": "Mozilla/5.0"})
     memory_zip = io.BytesIO()
@@ -193,15 +183,15 @@ def download_all():
             try:
                 content, content_type = download_binary(session, c["href"])
             except Exception as e:
-                # skip this file but continue
+                
                 continue
-            # determine filename
+            
             parsed = urlparse(c["href"])
             basename = os.path.basename(parsed.path) or f"causelist_{idx}.pdf"
             if not basename.lower().endswith(".pdf"):
-                # ensure .pdf extension
+                
                 basename = f"{basename}.pdf"
-            # if duplicate name, make unique
+            
             arcname = basename
             count = 1
             while arcname in zf.namelist():
