@@ -3,6 +3,7 @@ import io
 import os
 import zipfile
 from urllib.parse import urljoin, urlparse
+from dotenv import load_dotenv
 
 import requests
 from bs4 import BeautifulSoup
@@ -14,8 +15,10 @@ from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 from webdriver_manager.chrome import ChromeDriverManager
 
+load_dotenv()
+
 app = Flask(__name__)
-app.secret_key = os.environ.get("FLASK_SECRET", "change-me-for-prod")
+app.secret_key = os.environ.get("FLASK_SECRET", "secretkey")
 
 # --- Configuration ---
 BASE_PAGE_URL = "https://newdelhi.dcourts.gov.in/cause-list-%e2%81%84-daily-board/"
