@@ -1,0 +1,31 @@
+<!-- templates/index.html -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Download All Cause Lists — New Delhi Courts</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-100 font-sans">
+    <div class="max-w-2xl mx-auto p-6">
+      <div class="bg-white rounded-lg p-6 shadow">
+        <h1 class="text-2xl font-bold mb-2">Download All Judges' Cause Lists</h1>
+        <p class="text-gray-600 mb-4">Source: <a class="text-blue-600" href="{{ base_url }}" target="_blank">{{ base_url }}</a></p>
+
+        <form action="/download_all" method="post" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Date (YYYY-MM-DD)</label>
+            <input name="date" type="date" required class="mt-1 block w-full rounded border-gray-300 shadow-sm" />
+          </div>
+
+          <div>
+            <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700">Download All Cause Lists (ZIP)</button>
+          </div>
+        </form>
+
+        <p class="text-xs text-gray-500 mt-4">If the site uses JavaScript to populate the links, the app will attempt a Selenium fallback. Ensure Chrome/Chromium is installed on the server for Selenium to work.</p>
+      </div>
+    </div>
+  </body>
+</html>
